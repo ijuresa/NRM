@@ -15,6 +15,7 @@ import android.net.wifi.ScanResult;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Looper;
+import android.os.Parcelable;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -36,12 +37,13 @@ public class MainActivity extends AppCompatActivity {
     private WifiManager mWifiManager;
     private ConnectivityManager connectivityManager;
     private NetworkInfo networkInfo;
-    private List<ScanResult> mScanResults;
     WifiInfo wifiInfo;
     private int position;
 
     Timer timer;
     TimerTask timerTask;
+
+    WifiScanReceiver scanReceiver = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,7 +69,11 @@ public class MainActivity extends AppCompatActivity {
         // This will trigger on first scan so we can find data about networks
         intentFilter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
 
-        registerReceiver(mWifiScanReceiver, intentFilter);
+        //registerReceiver(mWifiScanReceiver, intentFilter);
+        scanReceiver = WifiScanReceiver.get_wifiScanReceiver();
+        scanReceiver.setWifiManager(mWifiManager);
+
+        registerReceiver(scanReceiver, intentFilter);
 
         // Start initial SCAN
         mWifiManager.startScan();
@@ -114,22 +120,23 @@ public class MainActivity extends AppCompatActivity {
                     getConnectedWifiInfo();
 
                     // When Broadcast receiver didn't fire
-                    if(mScanResults == null) {
+                    if(scanReceiver.getScanResults() == null) {
 
                     }
                     else {
                         String ssid =  null;
-                        for(position = 0; position < mScanResults.size(); position ++) {
-                            ssid = getWifiSSID(mWifiManager);
+                        for(position = 0; position < scanReceiver.getScanResults().size();
+                                position ++) {
+                            ssid = scanReceiver.getWifiSSID();
 
-                            if(mScanResults.get(position).SSID.equals(ssid)) {
-                                Log.d(wifiInfo.getBSSID() + " = " + mScanResults.get(position).SSID,
-                                        "ono");
+                            if(scanReceiver.getScanResults().get(position).SSID.equals(ssid)) {
+                                Log.d(wifiInfo.getBSSID() + " = " + scanReceiver.getScanResults()
+                                                .get(position).SSID, "ono");
                                 break;
                             }
                         }
                         WifiDialog lDialog = new WifiDialog(MainActivity.this,
-                                mScanResults.get(position).toString());
+                                scanReceiver.getScanResults().get(position).toString());
                         lDialog.showDialog();
                     }
                 }
@@ -171,32 +178,6 @@ public class MainActivity extends AppCompatActivity {
         };
     }
 
-    private final BroadcastReceiver mWifiScanReceiver = new BroadcastReceiver() {
-        @Override
-
-        public void onReceive(Context context, Intent intent) {
-
-            if(intent.getAction().equals(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)) {
-                mScanResults = mWifiManager.getScanResults();
-
-                Log.d(String.valueOf(mScanResults.size()), "Size of and array");
-
-                for(int i = 0; i < mScanResults.size(); i ++) {
-                    Log.d(mScanResults.get(i).SSID, "id od " + i);
-                }
-            }
-            Toast.makeText(context, "Usao u Broadcast", Toast.LENGTH_SHORT).show();
-            Log.i("onReceive", " Usao");
-
-            if(intent.getAction().equals(WifiManager.SUPPLICANT_STATE_CHANGED_ACTION )) {
-                SupplicantState state = intent.getParcelableExtra(WifiManager.EXTRA_NEW_STATE);
-                if((SupplicantState.isValidState(state)) && (state == SupplicantState.COMPLETED)) {
-                    boolean changed = wifiChanged();
-                }
-            }
-        }
-    };
-
     private boolean isConnectedWifi() {
         connectivityManager = (ConnectivityManager) getApplicationContext().
                 getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -214,26 +195,8 @@ public class MainActivity extends AppCompatActivity {
         wifiInfo = mWifiManager.getConnectionInfo();
     }
 
-    private String getWifiSSID(WifiManager _wifiManager) {
-        WifiInfo _wifiInfo = _wifiManager.getConnectionInfo();
-
-        return _wifiInfo.getSSID().replaceAll("\"","");
-    }
-
-    private boolean wifiChanged() {
-        boolean _changed = false;
-
-        String previousMacAddress = getMacAddress();
 
 
-        return _changed;
-    }
 
-    private String getMacAddress() {
-        String macAddress = null;
-
-
-        return macAddress;
-    }
 }
 

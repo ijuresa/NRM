@@ -13,13 +13,16 @@ import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.util.Log;
 
-import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.GroundOverlay;
+import com.google.android.gms.maps.model.GroundOverlayOptions;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MarkerOptions;
+
+
 
 
 public class MapActivity extends FragmentActivity implements OnMapReadyCallback {
@@ -28,12 +31,21 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
 
     double longitudeGps = 0, latitudeGps = 0;
 
+    WifiScanReceiver scanReceiver;
+
     String TAG = "MapActivity: ";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_map);
+
+        scanReceiver = WifiScanReceiver.get_wifiScanReceiver();
+        String BSSID = scanReceiver.getWifiSSID();
+        Log.d(TAG, BSSID + " MapActivity");
+
+
+
 
         // Initialize Location manager
         locationManager = (LocationManager) getApplicationContext().
@@ -108,7 +120,12 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                 public void run() {
                     LatLng test = new LatLng(latitudeGps, longitudeGps);
                     mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(test, 15));
-                    //mMap.animateCamera(CameraUpdateFactory.zoomIn());
+
+                    GroundOverlayOptions groundOverlayOptions = new GroundOverlayOptions()
+                            .image(BitmapDescriptorFactory.fromResource(R.drawable.net_0))
+                            .position(test, 5f);
+
+                    mMap.addGroundOverlay(groundOverlayOptions);
                 }
             });
         }
@@ -132,6 +149,10 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
+    }
+
+    private void addGroundOverlay() {
+
     }
 
 
