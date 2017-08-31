@@ -99,10 +99,6 @@ public class MainActivity extends AppCompatActivity {
         gButtonShowMap.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Check if results are empty -> Broadcast receiver didin't fire
-                if(mScanResults == null) {
-                    return; // Don't do anything
-                }
                 // Start new Activity
                 Intent _intent = new Intent(MainActivity.this, MapActivity.class);
                 MainActivity.this.startActivity(_intent);
@@ -143,9 +139,6 @@ public class MainActivity extends AppCompatActivity {
 
     // Use handler to run in TimerTask
     final static android.os.Handler handler = new android.os.Handler();
-
-
-
 
     public void startTimer() {
         timer = new Timer();
@@ -202,7 +195,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
-
     };
 
     private boolean isConnectedWifi() {
