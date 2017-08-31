@@ -1,7 +1,9 @@
 package com.example.jura611.nrm;
 
+import android.app.AlarmManager;
 import android.app.Dialog;
 import android.app.Fragment;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -12,6 +14,7 @@ import android.net.NetworkInfo;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.os.Looper;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -23,9 +26,13 @@ import android.widget.Toast;
 import android.net.wifi.SupplicantState;
 
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
 
 public class MainActivity extends AppCompatActivity {
-    private Button gButtonStartScan, gButtonShowDetails;
+    private Button gButtonStartScan, gButtonShowDetails, gButtonShowMap;
     private WifiManager mWifiManager;
     private ConnectivityManager connectivityManager;
     private NetworkInfo networkInfo;
@@ -33,11 +40,8 @@ public class MainActivity extends AppCompatActivity {
     WifiInfo wifiInfo;
     private int position;
 
-    // Shared preferences file
-    public static final String PREFERENCE_FILE = "NKS";
-
-    // Map
-    private Fragment mapFragment;
+    Timer timer;
+    TimerTask timerTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,10 +58,6 @@ public class MainActivity extends AppCompatActivity {
             mWifiManager.setWifiEnabled(true);
         }
 
-        // Get preferences
-        final SharedPreferences pSettings = getSharedPreferences(PREFERENCE_FILE, 0);
-        final SharedPreferences.Editor pEdtor = pSettings.edit();
-
         // Register receiver
         IntentFilter intentFilter = new IntentFilter();
 
@@ -69,7 +69,7 @@ public class MainActivity extends AppCompatActivity {
 
         registerReceiver(mWifiScanReceiver, intentFilter);
 
-        // Start scan
+        // Start initial SCAN
         mWifiManager.startScan();
 
         addListenerOnButtons();
@@ -78,6 +78,7 @@ public class MainActivity extends AppCompatActivity {
     private void addListenerOnButtons() {
         gButtonStartScan = (Button)findViewById(R.id.btnStart);
         gButtonShowDetails = (Button)findViewById(R.id.btnShowDetails);
+        gButtonShowMap = (Button)findViewById(R.id.btnShowMap);
 
         // Set listener
         gButtonStartScan.setOnClickListener(new View.OnClickListener() {
@@ -87,18 +88,24 @@ public class MainActivity extends AppCompatActivity {
                 if(!isConnectedWifi()) {
                     Toast.makeText(MainActivity.this, "Connect to Wifi", Toast.LENGTH_SHORT).show();
                 }
-                //mapFragment = MapFragment.newInstance();
 
+                // Start Alarm Manager for scanning
                 else {
-                    // Check if results are empty -> Broadcast receiver didin't fire
-                    if(mScanResults == null) {
-                        return; // Don't do anything
-                    }
-                    // Start new Activity
-                    Intent _intent = new Intent(MainActivity.this, MapActivity.class);
-                    MainActivity.this.startActivity(_intent);
+                    startTimer();
                 }
+            }
+        });
 
+        gButtonShowMap.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Check if results are empty -> Broadcast receiver didin't fire
+                if(mScanResults == null) {
+                    return; // Don't do anything
+                }
+                // Start new Activity
+                Intent _intent = new Intent(MainActivity.this, MapActivity.class);
+                MainActivity.this.startActivity(_intent);
             }
         });
 
@@ -120,11 +127,13 @@ public class MainActivity extends AppCompatActivity {
                             ssid = getWifiSSID(mWifiManager);
 
                             if(mScanResults.get(position).SSID.equals(ssid)) {
-                                Log.d(wifiInfo.getBSSID() + " = " + mScanResults.get(position).SSID, "ono");
+                                Log.d(wifiInfo.getBSSID() + " = " + mScanResults.get(position).SSID,
+                                        "ono");
                                 break;
                             }
                         }
-                        WifiDialog lDialog = new WifiDialog(MainActivity.this, mScanResults.get(position).toString());
+                        WifiDialog lDialog = new WifiDialog(MainActivity.this,
+                                mScanResults.get(position).toString());
                         lDialog.showDialog();
                     }
                 }
@@ -132,8 +141,46 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    // Use handler to run in TimerTask
+    final static android.os.Handler handler = new android.os.Handler();
+
+
+
+
+    public void startTimer() {
+        timer = new Timer();
+
+        // Initialize TimerTask
+        initializeTimerTask();
+
+        // After 2s Timer will run every other 2 sec
+        timer.schedule(timerTask, 2000, 2000);
+    }
+
+    public void stopTimer() {
+        if(timer != null) {
+            timer.cancel();
+            timer = null;
+        }
+    }
+
+    public void initializeTimerTask() {
+        timerTask = new TimerTask() {
+            @Override
+            public void run() {
+                handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        mWifiManager.startScan();
+                    }
+                });
+            }
+        };
+    }
+
     private final BroadcastReceiver mWifiScanReceiver = new BroadcastReceiver() {
         @Override
+
         public void onReceive(Context context, Intent intent) {
 
             if(intent.getAction().equals(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)) {
@@ -145,6 +192,8 @@ public class MainActivity extends AppCompatActivity {
                     Log.d(mScanResults.get(i).SSID, "id od " + i);
                 }
             }
+            Toast.makeText(context, "Usao u Broadcast", Toast.LENGTH_SHORT).show();
+            Log.i("onReceive", " Usao");
 
             if(intent.getAction().equals(WifiManager.SUPPLICANT_STATE_CHANGED_ACTION )) {
                 SupplicantState state = intent.getParcelableExtra(WifiManager.EXTRA_NEW_STATE);
@@ -153,10 +202,12 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
+
     };
 
     private boolean isConnectedWifi() {
-        connectivityManager = (ConnectivityManager) getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+        connectivityManager = (ConnectivityManager) getApplicationContext().
+                getSystemService(Context.CONNECTIVITY_SERVICE);
         networkInfo = connectivityManager.getActiveNetworkInfo();
 
         if(networkInfo != null) { //!< Connected to the internet

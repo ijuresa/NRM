@@ -26,6 +26,8 @@
             </intent-filter>
         </activity>
 
+        <service android:name=".WifiServiceScanner" />
+
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyBVOxmHnfRHRxjg9yD-UJCTXmfzH5x2BXc" />
