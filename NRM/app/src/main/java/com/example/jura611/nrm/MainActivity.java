@@ -48,6 +48,8 @@ public class MainActivity extends AppCompatActivity {
 
     WifiScanReceiver scanReceiver = null;
 
+    boolean started = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -81,18 +83,45 @@ public class MainActivity extends AppCompatActivity {
         // Start initial SCAN
         mWifiManager.startScan();
 
-        // Check if not connected turn off ShowDetails button
-        if(!isConnectedWifi()) {
-            gButtonShowDetails.setEnabled(false);
-        }
-
         addListenerOnButtons();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        if(started) {
+            startTimer();
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        if(started) {
+            stopTimer();
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+        if(started) {
+            stopTimer();
+        }
     }
 
     private void addListenerOnButtons() {
         gButtonStartScan = (Button)findViewById(R.id.btnStart);
         gButtonShowDetails = (Button)findViewById(R.id.btnShowDetails);
         gButtonShowMap = (Button)findViewById(R.id.btnShowMap);
+
+        // Check if not connected turn off ShowDetails button
+        if(!isConnectedWifi()) {
+            gButtonShowDetails.setEnabled(false);
+        }
 
         // Set listener
         gButtonStartScan.setOnClickListener(new View.OnClickListener() {
@@ -105,8 +134,24 @@ public class MainActivity extends AppCompatActivity {
 
                 // Start Alarm Manager for scanning
                 else {
-                    gButtonShowDetails.setEnabled(true);
-                    startTimer();
+                    if(started == false) {
+                        gButtonShowDetails.setEnabled(true);
+                        gButtonStartScan.setText("Stop");
+                        started = true;
+                        startTimer();
+
+                        Toast.makeText(MainActivity.this, "Scanning started", Toast.LENGTH_SHORT).show();
+
+                        return;
+                    }
+
+                    gButtonStartScan.setText("Start");
+                    started = false;
+                    gButtonShowDetails.setEnabled(false);
+
+                    Toast.makeText(MainActivity.this, "Scanning stopped", Toast.LENGTH_SHORT).show();
+
+                    stopTimer();
                 }
             }
         });
@@ -114,9 +159,14 @@ public class MainActivity extends AppCompatActivity {
         gButtonShowMap.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Start new Activity
-                Intent _intent = new Intent(MainActivity.this, MapActivity.class);
-                MainActivity.this.startActivity(_intent);
+                // Don't enter if scanning is not started
+                if(started) {
+                    // Start new Activity
+                    Intent _intent = new Intent(MainActivity.this, MapActivity.class);
+                    MainActivity.this.startActivity(_intent);
+                }
+
+                else Toast.makeText(MainActivity.this, "Start scanning", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -155,9 +205,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void showAlert() {
         final AlertDialog.Builder dialog = new AlertDialog.Builder(this);
-        dialog.setTitle("Enable Wifi");
+        dialog.setTitle("Connect");
         dialog.setMessage("Connect Wifi to start scanning.");
-        dialog.setPositiveButton("Wifi", new DialogInterface.OnClickListener() {
+        dialog.setPositiveButton("Connect", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 Intent lIntent = new Intent(Settings.ACTION_WIFI_SETTINGS);
