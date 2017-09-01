@@ -1,11 +1,13 @@
 package com.example.jura611.nrm;
 
 import android.app.AlarmManager;
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.Fragment;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
@@ -16,6 +18,7 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Looper;
 import android.os.Parcelable;
+import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -92,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 // When starting, check if mobile is NOT connected to the WIFI
                 if(!isConnectedWifi()) {
-                    Toast.makeText(MainActivity.this, "Connect to Wifi", Toast.LENGTH_SHORT).show();
+                    showAlert();
                 }
 
                 // Start Alarm Manager for scanning
@@ -142,6 +145,27 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    private void showAlert() {
+        final AlertDialog.Builder dialog = new AlertDialog.Builder(this);
+        dialog.setTitle("Enable Wifi");
+        dialog.setMessage("Connect Wifi to start scanning.");
+        dialog.setPositiveButton("Wifi", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                Intent lIntent = new Intent(Settings.ACTION_WIFI_SETTINGS);
+                startActivity(lIntent);
+            }
+        });
+
+        dialog.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+            }
+        });
+        dialog.show();
     }
 
     // Use handler to run in TimerTask

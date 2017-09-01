@@ -35,6 +35,8 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
 
     String TAG = "MapActivity: ";
 
+    boolean hasMoved = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -43,8 +45,6 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         scanReceiver = WifiScanReceiver.get_wifiScanReceiver();
         String BSSID = scanReceiver.getWifiSSID();
         Log.d(TAG, BSSID + " MapActivity");
-
-
 
 
         // Initialize Location manager
@@ -71,13 +71,13 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             return;
         }
 
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 10, locationListener);
+        // Every 2 second
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000, 1, locationListener);
 
         // Map
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-
     }
 
     private boolean isLocationEnabled() {
@@ -119,7 +119,13 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                 @Override
                 public void run() {
                     LatLng test = new LatLng(latitudeGps, longitudeGps);
-                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(test, 15));
+
+                    int rssid = scanReceiver.getWifiSignalStrength();
+                    Log.d(TAG,  Double.toString(longitudeGps) + " Signal Strength");
+                    if(!hasMoved) {
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(test, 15));
+                        hasMoved = true;
+                    }
 
                     GroundOverlayOptions groundOverlayOptions = new GroundOverlayOptions()
                             .image(BitmapDescriptorFactory.fromResource(R.drawable.net_0))
@@ -150,12 +156,4 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
     }
-
-    private void addGroundOverlay() {
-
-    }
-
-
-
-
 }

@@ -44,11 +44,13 @@ public class WifiScanReceiver extends BroadcastReceiver {
         if(intent.getAction().equals(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)) {
             scanResults = wifiManager.getScanResults();
 
+            /*
             Log.d(String.valueOf(scanResults.size()), "Size of and array");
 
             for(int i = 0; i < scanResults.size(); i ++) {
                 Log.d(scanResults.get(i).SSID, "id od " + i);
             }
+            */
         }
 
         //
@@ -91,10 +93,15 @@ public class WifiScanReceiver extends BroadcastReceiver {
         this.wifiManager = wifiManager;
     }
 
-
     public String getWifiSSID() {
         wifiInfo = wifiManager.getConnectionInfo();
 
         return wifiInfo.getSSID().replaceAll("\"","");
+    }
+
+    public int getWifiSignalStrength() {
+
+
+        return wifiManager.calculateSignalLevel(wifiInfo.getRssi(), 7);
     }
 }
