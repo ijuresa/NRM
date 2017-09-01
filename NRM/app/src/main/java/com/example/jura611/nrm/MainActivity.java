@@ -81,6 +81,11 @@ public class MainActivity extends AppCompatActivity {
         // Start initial SCAN
         mWifiManager.startScan();
 
+        // Check if not connected turn off ShowDetails button
+        if(!isConnectedWifi()) {
+            gButtonShowDetails.setEnabled(false);
+        }
+
         addListenerOnButtons();
     }
 
@@ -100,6 +105,7 @@ public class MainActivity extends AppCompatActivity {
 
                 // Start Alarm Manager for scanning
                 else {
+                    gButtonShowDetails.setEnabled(true);
                     startTimer();
                 }
             }
@@ -218,9 +224,5 @@ public class MainActivity extends AppCompatActivity {
     private void getConnectedWifiInfo() {
         wifiInfo = mWifiManager.getConnectionInfo();
     }
-
-
-
-
 }
 
