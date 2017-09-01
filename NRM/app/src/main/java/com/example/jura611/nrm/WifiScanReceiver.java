@@ -4,6 +4,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.wifi.ScanResult;
 import android.net.wifi.SupplicantState;
 import android.net.wifi.WifiInfo;
@@ -23,8 +25,12 @@ import static android.content.Context.WIFI_SERVICE;
 public class WifiScanReceiver extends BroadcastReceiver {
     private WifiManager wifiManager;
     private WifiInfo wifiInfo;
+    private NetworkInfo networkInfo;
 
     private List<ScanResult> scanResults;
+    private ConnectivityManager connectivityManager;
+    private String TAG = "WifiScanReceiver";
+
 
     public WifiScanReceiver(WifiManager _wifiManager) {
         this.wifiManager = _wifiManager;
@@ -40,7 +46,8 @@ public class WifiScanReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        Toast.makeText(context, "I'm running", Toast.LENGTH_SHORT).show();
+        Log.d(TAG, " Broadcast has fired");
+
         if(intent.getAction().equals(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)) {
             scanResults = wifiManager.getScanResults();
 
@@ -100,8 +107,23 @@ public class WifiScanReceiver extends BroadcastReceiver {
     }
 
     public int getWifiSignalStrength() {
+        // Get % of Wifi Signal Strength
+        return wifiManager.calculateSignalLevel(wifiInfo.getRssi(), 100);
+    }
 
+    public boolean isConnectedWifi(Context context) {
+        connectivityManager = (ConnectivityManager) context.
+                getSystemService(Context.CONNECTIVITY_SERVICE);
+        networkInfo = connectivityManager.getActiveNetworkInfo();
 
-        return wifiManager.calculateSignalLevel(wifiInfo.getRssi(), 7);
+        if(networkInfo != null) { //!< Connected to the internet
+            if(networkInfo.getType() == ConnectivityManager.TYPE_WIFI) { //!< Connected to the WIFI
+                return true;
+            }
+        }
+        return false;
     }
 }
+
+
+

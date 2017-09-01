@@ -46,9 +46,14 @@ public class MainActivity extends AppCompatActivity {
     Timer timer;
     TimerTask timerTask;
 
+    String TAG = "MainActivity";
+
     WifiScanReceiver scanReceiver = null;
 
     boolean started = false;
+
+    // Intent for MapActivity
+    Intent _intent = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,6 +95,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
+        Log.d(TAG, " onResume");
         if(started) {
             startTimer();
         }
@@ -98,8 +104,11 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
+        Log.d(TAG, " onPause");
 
-        if(started) {
+        if(started && (_intent == null)) {
+            // Broadcast has started BUT Map is not opened
+            Log.d(TAG, " onPause without MapActivity");
             stopTimer();
         }
     }
@@ -108,7 +117,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onStop() {
         super.onStop();
 
-        if(started) {
+        Log.d(TAG, " onStop");
+        if(started && (_intent == null)) {
+            Log.d(TAG, " onStop without MapActivity");
             stopTimer();
         }
     }
@@ -119,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
         gButtonShowMap = (Button)findViewById(R.id.btnShowMap);
 
         // Check if not connected turn off ShowDetails button
-        if(!isConnectedWifi()) {
+        if(!scanReceiver.isConnectedWifi(getApplicationContext())) {
             gButtonShowDetails.setEnabled(false);
         }
 
@@ -128,7 +139,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 // When starting, check if mobile is NOT connected to the WIFI
-                if(!isConnectedWifi()) {
+                if(!scanReceiver.isConnectedWifi(getApplicationContext())) {
                     showAlert();
                 }
 
@@ -162,7 +173,7 @@ public class MainActivity extends AppCompatActivity {
                 // Don't enter if scanning is not started
                 if(started) {
                     // Start new Activity
-                    Intent _intent = new Intent(MainActivity.this, MapActivity.class);
+                    _intent = new Intent(MainActivity.this, MapActivity.class);
                     MainActivity.this.startActivity(_intent);
                 }
 
@@ -173,7 +184,7 @@ public class MainActivity extends AppCompatActivity {
         gButtonShowDetails.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(isConnectedWifi()) {     //!< WIFI is connected
+                if(scanReceiver.isConnectedWifi(getApplicationContext())) {  //!< WIFI is connected
 
                     // Create popup to show details of the WIFI network
                     getConnectedWifiInfo();
@@ -251,6 +262,21 @@ public class MainActivity extends AppCompatActivity {
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
+                        // We have started scanning and Wifi was ON, but Wifi is lost now and we are
+                        // trying to scan - not good
+                        if((started == true)
+                                && (!scanReceiver.isConnectedWifi(getApplicationContext()))) {
+                            // Set start button to stop
+                            gButtonStartScan.setText("Stop");
+                            // Disable ShowDetails button
+                            gButtonShowDetails.setEnabled(false);
+
+                            // Ask user to connect again to Wifi
+                            showAlert();
+                            return;
+                        }
+
+                        // else - just scan network
                         mWifiManager.startScan();
                     }
                 });
@@ -258,6 +284,7 @@ public class MainActivity extends AppCompatActivity {
         };
     }
 
+    /*
     private boolean isConnectedWifi() {
         connectivityManager = (ConnectivityManager) getApplicationContext().
                 getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -270,7 +297,7 @@ public class MainActivity extends AppCompatActivity {
         }
         return false;
     }
-
+*/
     private void getConnectedWifiInfo() {
         wifiInfo = mWifiManager.getConnectionInfo();
     }

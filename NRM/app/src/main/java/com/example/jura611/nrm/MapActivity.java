@@ -12,6 +12,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -30,6 +31,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     LocationManager locationManager = null;
 
     double longitudeGps = 0, latitudeGps = 0;
+    boolean started = false;
 
     WifiScanReceiver scanReceiver;
 
@@ -45,7 +47,6 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         scanReceiver = WifiScanReceiver.get_wifiScanReceiver();
         String BSSID = scanReceiver.getWifiSSID();
         Log.d(TAG, BSSID + " MapActivity");
-
 
         // Initialize Location manager
         locationManager = (LocationManager) getApplicationContext().
@@ -80,6 +81,29 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         mapFragment.getMapAsync(this);
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.d(TAG, "onResume");
+        started = true;
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        Log.d(TAG, "onPause");
+        started = false;
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+        Log.d(TAG, "onStop");
+        started = false;
+    }
+
     private boolean isLocationEnabled() {
         return (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
                 || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER));
@@ -106,9 +130,45 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         dialog.show();
     }
 
+    private int getSignalColour(int signalStrength) {
+        int colour = 0;
+
+        if(signalStrength >= 90) {
+            colour = R.drawable.net_100;
+        }
+
+        else if(signalStrength < 90 && signalStrength >= 75) {
+            colour = R.drawable.net_85;
+        }
+
+        else if(signalStrength < 75 && signalStrength >= 60) {
+            colour = R.drawable.net_60;
+        }
+
+        else if(signalStrength < 60 || signalStrength >= 45) {
+            colour = R.drawable.net_50;
+        }
+
+        else if(signalStrength < 45 || signalStrength >= 25) {
+            colour = R.drawable.net_35;
+        }
+
+        else if(signalStrength < 25 || signalStrength >= 10) {
+            colour = R.drawable.net_20;
+        }
+
+        else colour = R.drawable.net_0;
+
+
+        return colour;
+    }
+
     private final android.location.LocationListener locationListener = new android.location.LocationListener() {
         @Override
         public void onLocationChanged(Location location) {
+            if(!started) {
+                return;
+            }
             latitudeGps = location.getLatitude();
             longitudeGps = location.getLongitude();
 
@@ -120,15 +180,28 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                 public void run() {
                     LatLng test = new LatLng(latitudeGps, longitudeGps);
 
-                    int rssid = scanReceiver.getWifiSignalStrength();
-                    Log.d(TAG,  Double.toString(longitudeGps) + " Signal Strength");
+                    // Check if WIFI is OFF
+                    if(!scanReceiver.isConnectedWifi(getApplicationContext())) {
+                        Toast.makeText(MapActivity.this, "Connect To Wifi", Toast.LENGTH_SHORT).show();
+                        Log.d(TAG, "Connect to Wifi");
+                        return;
+                    }
+
+                    int signalPercentage = scanReceiver.getWifiSignalStrength();
+                    Log.d(TAG,  signalPercentage + " Signal Strength");
+                    // Toast.makeText(MapActivity.this, "Signal " + rssid, Toast.LENGTH_SHORT).show();
+
+                    // Mover camera Once - TODO: Fix
                     if(!hasMoved) {
                         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(test, 15));
                         hasMoved = true;
                     }
 
+                    // Check Wifi Signal percentage and draw cube of that colour
+                    int resourceToDraw = getSignalColour(signalPercentage);
+
                     GroundOverlayOptions groundOverlayOptions = new GroundOverlayOptions()
-                            .image(BitmapDescriptorFactory.fromResource(R.drawable.net_0))
+                            .image(BitmapDescriptorFactory.fromResource(resourceToDraw))
                             .position(test, 5f);
 
                     mMap.addGroundOverlay(groundOverlayOptions);
@@ -156,4 +229,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
     }
+
+
+
 }
