@@ -80,8 +80,6 @@ public class WifiScanReceiver extends BroadcastReceiver {
 
     private String getMacAddress() {
         String macAddress = null;
-
-
         return macAddress;
     }
     public WifiManager getWifiManager() {
@@ -107,6 +105,7 @@ public class WifiScanReceiver extends BroadcastReceiver {
     }
 
     public int getWifiSignalStrength() {
+        wifiInfo = wifiManager.getConnectionInfo();
         // Get % of Wifi Signal Strength
         return wifiManager.calculateSignalLevel(wifiInfo.getRssi(), 100);
     }

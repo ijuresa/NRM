@@ -7,42 +7,47 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationManager;
+import android.os.Bundle;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
-import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
-import com.google.android.gms.maps.model.GroundOverlayOptions;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.TileOverlay;
+import com.google.android.gms.maps.model.TileOverlayOptions;
+import com.google.maps.android.heatmaps.HeatmapTileProvider;
 
-public class MapActivity extends FragmentActivity implements OnMapReadyCallback {
+import java.util.ArrayList;
+import java.util.List;
+
+
+public class MapActivity2 extends FragmentActivity implements OnMapReadyCallback {
     GoogleMap mMap;
     LocationManager locationManager = null;
 
     double longitudeGps = 0, latitudeGps = 0;
-    boolean started = false;
+    int index = 0;
 
     WifiScanReceiver scanReceiver;
+    String TAG = "MapActivity2: ";
 
-    String TAG = "MapActivity1: ";
-
-    boolean hasMoved = false;
+    HeatmapTileProvider mProvider = null;
+    TileOverlay mOverlay = null;
+    ArrayList<LatLng> heatMapListData = new ArrayList<LatLng>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_map);
+        setContentView(R.layout.activity_map2);
 
+        // Get object
         scanReceiver = WifiScanReceiver.get_wifiScanReceiver();
-        String BSSID = scanReceiver.getWifiSSID();
-        Log.d(TAG, BSSID + " MapActivity");
 
         // Initialize Location manager
         locationManager = (LocationManager) getApplicationContext().
@@ -53,11 +58,11 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             showAlert();
         }
 
-        // Start requesting location
+        // Every 2 second
         if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED &&
-                ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION)
-                        != PackageManager.PERMISSION_GRANTED) {
+                != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
             //    ActivityCompat#requestPermissions
             // here to request the missing permissions, and then overriding
@@ -68,36 +73,42 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             return;
         }
 
-        // Every 2 second
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000, 1, locationListener);
 
         // Map
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
+                .findFragmentById(R.id.map2);
         mapFragment.getMapAsync(this);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Log.d(TAG, "onResume");
-        started = true;
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+    }
 
-        Log.d(TAG, "onPause");
-        started = false;
+    @Override
+    protected void onResume() {
+        super.onResume();
     }
 
     @Override
     protected void onStop() {
         super.onStop();
+    }
 
-        Log.d(TAG, "onStop");
-        started = false;
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+    }
+
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        mMap = googleMap;
+
+    }
+
+    private void addHeatmap() {
+
     }
 
     private boolean isLocationEnabled() {
@@ -126,46 +137,11 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         dialog.show();
     }
 
-    private int getSignalColour(int signalStrength) {
-        int colour = 0;
-
-        if(signalStrength >= 90) {
-            colour = R.drawable.net_100;
-        }
-
-        else if(signalStrength < 90 && signalStrength >= 75) {
-            colour = R.drawable.net_85;
-        }
-
-        else if(signalStrength < 75 && signalStrength >= 60) {
-            colour = R.drawable.net_60;
-        }
-
-        else if(signalStrength < 60 || signalStrength >= 45) {
-            colour = R.drawable.net_50;
-        }
-
-        else if(signalStrength < 45 || signalStrength >= 25) {
-            colour = R.drawable.net_35;
-        }
-
-        else if(signalStrength < 25 || signalStrength >= 10) {
-            colour = R.drawable.net_20;
-        }
-
-        else colour = R.drawable.net_0;
-
-
-        return colour;
-    }
-
     private final android.location.LocationListener locationListener
             = new android.location.LocationListener() {
+
         @Override
         public void onLocationChanged(Location location) {
-            if(!started) {
-                return;
-            }
             latitudeGps = location.getLatitude();
             longitudeGps = location.getLongitude();
 
@@ -176,34 +152,28 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                 @Override
                 public void run() {
                     LatLng test = new LatLng(latitudeGps, longitudeGps);
+                    heatMapListData.add(index, test);
+                    index ++;
 
                     // Check if WIFI is OFF
                     if(!scanReceiver.isConnectedWifi(getApplicationContext())) {
-                        Toast.makeText(MapActivity.this, "Connect To Wifi", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MapActivity2.this, "Connect To Wifi", Toast.LENGTH_SHORT).show();
                         Log.d(TAG, "Connect to Wifi");
                         return;
                     }
 
                     int signalPercentage = scanReceiver.getWifiSignalStrength();
                     Log.d(TAG,  signalPercentage + " Signal Strength");
-                    // Toast.makeText(MapActivity.this, "Signal " + rssid, Toast.LENGTH_SHORT).show();
 
-                    // Mover camera Once - TODO: Fix
-                    if(!hasMoved) {
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(test, 15));
-                        hasMoved = true;
-                    }
+                    // Draw
+                    mProvider = new HeatmapTileProvider.Builder()
+                            .data(heatMapListData)
+                            .build();
 
-                    // Check Wifi Signal percentage and draw cube of that colour
-                    int resourceToDraw = getSignalColour(signalPercentage);
-
-                    GroundOverlayOptions groundOverlayOptions = new GroundOverlayOptions()
-                            .image(BitmapDescriptorFactory.fromResource(resourceToDraw))
-                            .position(test, 5f);
-
-                    mMap.addGroundOverlay(groundOverlayOptions);
+                    mOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(mProvider));
                 }
             });
+
         }
 
         @Override
@@ -221,9 +191,4 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
 
         }
     };
-
-    @Override
-    public void onMapReady(GoogleMap googleMap) {
-        mMap = googleMap;
-    }
 }
