@@ -36,6 +36,10 @@
 
         <activity android:name=".MapActivity" />
         <activity android:name=".MapActivity2" />
+        <activity
+            android:name=".MapActivity3"
+            android:label="@string/title_activity_map3"
+            android:theme="@style/AppTheme.NoActionBar"></activity>
     </application>
 
 </manifest>

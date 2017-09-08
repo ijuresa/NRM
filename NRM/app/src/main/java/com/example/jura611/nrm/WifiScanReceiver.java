@@ -122,6 +122,12 @@ public class WifiScanReceiver extends BroadcastReceiver {
         }
         return false;
     }
+
+    public String getWifiBssid() {
+        wifiInfo = wifiManager.getConnectionInfo();
+
+        return wifiInfo.getBSSID();
+    }
 }
 
 

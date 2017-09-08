@@ -9,10 +9,14 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -20,37 +24,31 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Tile;
 import com.google.android.gms.maps.model.TileOverlay;
 import com.google.android.gms.maps.model.TileOverlayOptions;
-import com.google.maps.android.heatmaps.HeatmapTileProvider;
-import com.google.maps.android.heatmaps.WeightedLatLng;
+import com.google.android.gms.maps.model.TileProvider;
 
 import java.io.IOException;
-import java.util.ArrayList;
 
-public class MapActivity2 extends FragmentActivity implements OnMapReadyCallback {
+public class MapActivity3 extends FragmentActivity implements OnMapReadyCallback {
+    String TAG = "MapActivity3: ";
+
+    TileOverlay tileOverlay;
+
     GoogleMap mMap;
     LocationManager locationManager = null;
-
-    double longitudeGps = 0, latitudeGps = 0;
-    int index = 0;
     boolean hasMoved = false;
 
-    WifiScanReceiver scanReceiver;
-    String TAG = "MapActivity2: ";
+    double longitudeGps = 0, latitudeGps = 0;
 
-    HeatmapTileProvider mProvider = null;
-    TileOverlay mOverlay = null;
-    ArrayList<WeightedLatLng> heatMapListData = new ArrayList<WeightedLatLng>();
-    ExportData exportData = null;
+    WifiScanReceiver scanReceiver;
+    ExportData exportData;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_map2);
-
-        // Get object
-        scanReceiver = WifiScanReceiver.get_wifiScanReceiver();
+        setContentView(R.layout.activity_map3);
 
         // Initialize Location manager
         locationManager = (LocationManager) getApplicationContext().
@@ -61,11 +59,11 @@ public class MapActivity2 extends FragmentActivity implements OnMapReadyCallback
             showAlert();
         }
 
+        scanReceiver = WifiScanReceiver.get_wifiScanReceiver();
+        exportData = ExportData.get_exportData();
+
         // Every 2 second
-        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
             //    ActivityCompat#requestPermissions
             // here to request the missing permissions, and then overriding
@@ -75,44 +73,32 @@ public class MapActivity2 extends FragmentActivity implements OnMapReadyCallback
             // for ActivityCompat#requestPermissions for more details.
             return;
         }
-
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 5, locationListener);
-
-        // Get excel data
-        exportData = ExportData.get_exportData();
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000, 1, locationListener);
 
         // Map
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map2);
+                .findFragmentById(R.id.map3);
         mapFragment.getMapAsync(this);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        Log.d(TAG, "onResume");
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        Log.d(TAG, "onPause");
     }
 
     @Override
     protected void onStop() {
         super.onStop();
 
-        // Save list to csv
-
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-    }
-
-    @Override
-    public void onMapReady(GoogleMap googleMap) {
-        mMap = googleMap;
+        Log.d(TAG, "onStop");
     }
 
     private boolean isLocationEnabled() {
@@ -143,7 +129,6 @@ public class MapActivity2 extends FragmentActivity implements OnMapReadyCallback
 
     private final android.location.LocationListener locationListener
             = new android.location.LocationListener() {
-
         @Override
         public void onLocationChanged(Location location) {
             latitudeGps = location.getLatitude();
@@ -155,35 +140,36 @@ public class MapActivity2 extends FragmentActivity implements OnMapReadyCallback
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
+                    LatLng test = new LatLng(latitudeGps, longitudeGps);
+
                     // Check if WIFI is OFF
                     if(!scanReceiver.isConnectedWifi(getApplicationContext())) {
-                        Toast.makeText(MapActivity2.this, "Connect To Wifi", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MapActivity3.this, "Connect To Wifi", Toast.LENGTH_SHORT).show();
                         Log.d(TAG, "Connect to Wifi");
                         return;
                     }
 
-                    double signalPercentage = (scanReceiver.getWifiSignalStrength() / 10);
-                    Log.d(TAG,  signalPercentage + " Signal Strength");
-
-                    LatLng test = new LatLng(latitudeGps, longitudeGps);
-
+                    // Mover camera Once - TODO: Fix
                     if(!hasMoved) {
                         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(test, 15));
                         hasMoved = true;
                     }
 
-                    WeightedLatLng realData = new WeightedLatLng(test, signalPercentage);
-                    heatMapListData.add(index, realData);
-                    Log.d(TAG, "Data Addded");
-                    index ++;
+                    // Get projection
+                    Log.d(TAG, "Projection " + mMap.getProjection().toScreenLocation(test));
 
-                    // Draw
-                    mProvider = new HeatmapTileProvider.Builder()
-                            .weightedData(heatMapListData)
-                            .radius(25)                     // Minimum radius - in pixels
-                            .build();
+                    // Get tile
+                    Tile tile = tileProvider.getTile(mMap.getProjection().toScreenLocation(test).x,
+                            mMap.getProjection().toScreenLocation(test).y, 15);
 
-                    mOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(mProvider));
+
+
+                    // Get projection
+                    Log.d(TAG, "Tile " + tile);
+
+                    // Write to map
+                    tileOverlay = mMap.addTileOverlay(new TileOverlayOptions()
+                    .tileProvider(tileProvider));
 
                     // Write data to csv
                     try {
@@ -211,4 +197,19 @@ public class MapActivity2 extends FragmentActivity implements OnMapReadyCallback
 
         }
     };
+
+    final TileProvider tileProvider = new TileProvider() {
+        @Override
+        public Tile getTile(int x, int y, int zoom) {
+            return null;
+        }
+    };
+
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        mMap = googleMap;
+
+        Log.d(TAG, "Max zoom lvl: " + mMap.getMaxZoomLevel());
+        Log.d(TAG, "Min zoom lvl: " + mMap.getMinZoomLevel());
+    }
 }

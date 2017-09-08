@@ -22,6 +22,8 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.GroundOverlayOptions;
 import com.google.android.gms.maps.model.LatLng;
 
+import java.io.IOException;
+
 public class MapActivity extends FragmentActivity implements OnMapReadyCallback {
     GoogleMap mMap;
     LocationManager locationManager = null;
@@ -30,6 +32,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     boolean started = false;
 
     WifiScanReceiver scanReceiver;
+    ExportData exportData;
 
     String TAG = "MapActivity1: ";
 
@@ -41,6 +44,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         setContentView(R.layout.activity_map);
 
         scanReceiver = WifiScanReceiver.get_wifiScanReceiver();
+        exportData = ExportData.get_exportData();
         String BSSID = scanReceiver.getWifiSSID();
         Log.d(TAG, BSSID + " MapActivity");
 
@@ -69,7 +73,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         }
 
         // Every 2 second
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000, 1, locationListener);
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 5, locationListener);
 
         // Map
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -141,20 +145,19 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             colour = R.drawable.net_60;
         }
 
-        else if(signalStrength < 60 || signalStrength >= 45) {
+        else if(signalStrength < 60 && signalStrength >= 45) {
             colour = R.drawable.net_50;
         }
 
-        else if(signalStrength < 45 || signalStrength >= 25) {
+        else if(signalStrength < 45 && signalStrength >= 25) {
             colour = R.drawable.net_35;
         }
 
-        else if(signalStrength < 25 || signalStrength >= 10) {
+        else if(signalStrength < 25 && signalStrength >= 10) {
             colour = R.drawable.net_20;
         }
 
         else colour = R.drawable.net_0;
-
 
         return colour;
     }
@@ -201,6 +204,13 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                             .image(BitmapDescriptorFactory.fromResource(resourceToDraw))
                             .position(test, 5f);
 
+                    // Write data to csv
+                    try {
+                        exportData.writeRow(latitudeGps, longitudeGps, scanReceiver.getWifiSignalStrength(),
+                                scanReceiver.getWifiSSID(), scanReceiver.getWifiBssid());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                     mMap.addGroundOverlay(groundOverlayOptions);
                 }
             });

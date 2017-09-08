@@ -36,7 +36,9 @@ import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 
 public class MainActivity extends AppCompatActivity {
-    private Button gButtonStartScan, gButtonShowDetails, gButtonShowMap, gButtonShowMap2;
+    private Button gButtonStartScan, gButtonShowDetails, gButtonShowMap, gButtonShowMap2,
+                    gButtonShowMap3;
+
     private WifiManager mWifiManager;
     private ConnectivityManager connectivityManager;
     private NetworkInfo networkInfo;
@@ -128,7 +130,8 @@ public class MainActivity extends AppCompatActivity {
         gButtonStartScan = (Button)findViewById(R.id.btnStart);
         gButtonShowDetails = (Button)findViewById(R.id.btnShowDetails);
         gButtonShowMap = (Button)findViewById(R.id.btnShowMap);
-        gButtonShowMap2 = (Button)findViewById(R.id.btwShowMap2);
+        gButtonShowMap2 = (Button)findViewById(R.id.btnShowMap2);
+        gButtonShowMap3 = (Button)findViewById(R.id.btnshowMap3);
 
         // Check if not connected turn off ShowDetails button
         if(!scanReceiver.isConnectedWifi(getApplicationContext())) {
@@ -221,6 +224,20 @@ public class MainActivity extends AppCompatActivity {
                 if(started) {
                     // Start new Activity
                     _intent = new Intent(MainActivity.this, MapActivity2.class);
+                    MainActivity.this.startActivity(_intent);
+                }
+
+                else Toast.makeText(MainActivity.this, "Start scanning", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        gButtonShowMap3.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Don't enter if scanning is not started
+                if(started) {
+                    // Start new Activity
+                    _intent = new Intent(MainActivity.this, MapActivity3.class);
                     MainActivity.this.startActivity(_intent);
                 }
 
